@@ -4,9 +4,12 @@ import java.awt.Rectangle;
 
 public class Enemy {
     private int x, y;
-    private int speed = 2; // Lebih lambat dari player (biar bisa kabur)
+    private int speed = 2;
 
-    // Variabel Animasi Sederhana
+    // Timer agar musuh tidak menembak terus menerus (seperti senapan mesin)
+    public int shootTimer = 0;
+
+    // Animasi
     public int spriteCounter = 0;
     public int spriteNum = 0;
 
@@ -15,19 +18,18 @@ public class Enemy {
         this.y = startY;
     }
 
-    // Logika Mengejar Player
+    // Logika Musuh
     public void update(int playerX, int playerY) {
-        // Kalau posisi player ada di kanan musuh, musuh gerak ke kanan
-        if (x < playerX) { x += speed; }
-        // Kalau posisi player ada di kiri musuh, musuh gerak ke kiri
-        if (x > playerX) { x -= speed; }
+        // 1. Gerak pelan mendekati player (Biar seru)
+        if (x < playerX) x += 1;
+        if (x > playerX) x -= 1;
+        if (y < playerY) y += 1;
+        if (y > playerY) y -= 1;
 
-        // Kalau posisi player di bawah, kejar ke bawah
-        if (y < playerY) { y += speed; }
-        // Kalau posisi player di atas, kejar ke atas
-        if (y > playerY) { y -= speed; }
+        // 2. Hitung waktu nembak (Setiap ~2 detik atau 120 frame)
+        shootTimer++;
 
-        // Update Animasi (biar gerak-gerak dikit)
+        // 3. Animasi
         spriteCounter++;
         if(spriteCounter > 12) {
             spriteNum++;
@@ -36,10 +38,18 @@ public class Enemy {
         }
     }
 
+    // Cek apakah musuh siap nembak?
+    public boolean readyToShoot() {
+        if (shootTimer >= 120) { // Ganti angka ini untuk atur kecepatan tembak musuh
+            shootTimer = 0;
+            return true;
+        }
+        return false;
+    }
+
     public int getX() { return x; }
     public int getY() { return y; }
 
-    // Hitbox Musuh (untuk cek Game Over)
     public Rectangle getBounds() {
         return new Rectangle(x, y, 40, 40);
     }

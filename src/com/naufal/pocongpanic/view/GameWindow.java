@@ -2,38 +2,52 @@ package com.naufal.pocongpanic.view;
 
 import javax.swing.*;
 
-/**
- * Class GameWindow (View)
- * Frame utama aplikasi (bingkai jendela).
- */
 public class GameWindow extends JFrame {
 
+    // 1. Bikin objek Sound
+    Sound music = new Sound();
+
     public GameWindow() {
-        // Set Judul Window
-        this.setTitle("Pocong Panic: Lari dari Konten");
-
-        // Aksi tombol X di pojok kanan atas (Tutup aplikasi)
+        this.setTitle("Hide and Seek The Challenge");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        // Supaya ukuran window tidak bisa diubah-ubah user
         this.setResizable(false);
+        this.setSize(800, 600);
 
-        // Membuat kanvas permainan (GamePanel)
-        GamePanel panel = new GamePanel();
+        // 2. Mainkan Musik Background
+        playMusic(0); // 0 adalah index lagu di Sound.java tadi
 
-        // Set ukuran area permainan (800x600 pixel)
-        panel.setPreferredSize(new java.awt.Dimension(800, 600));
+        showMenu();
 
-        // Masukkan kanvas ke dalam bingkai jendela
-        this.add(panel);
-
-        // Sesuaikan ukuran bingkai dengan ukuran kanvas (biar pas)
-        this.pack();
-
-        // Munculkan window di tengah-tengah layar monitor
         this.setLocationRelativeTo(null);
-
-        // Tampilkan window (wajib ada!)
         this.setVisible(true);
+    }
+
+    // Method helper buat play music
+    public void playMusic(int i) {
+        music.setFile(i);
+        music.play();
+        music.loop(); // Loop biar lagunya ngulang terus
+    }
+
+    // Method helper buat stop music (opsional kalau mau hening pas game over)
+    public void stopMusic() {
+        music.stop();
+    }
+
+    public void showMenu() {
+        this.getContentPane().removeAll();
+        MenuPanel menu = new MenuPanel(this);
+        this.add(menu);
+        this.revalidate();
+        this.repaint();
+    }
+
+    public void startGame(String username) {
+        this.getContentPane().removeAll();
+        GamePanel game = new GamePanel(this, username);
+        this.add(game);
+        game.requestFocusInWindow();
+        this.revalidate();
+        this.repaint();
     }
 }
