@@ -1,10 +1,10 @@
 package com.naufal.pocongpanic.view;
 
+import com.naufal.pocongpanic.model.GameSettings;
 import javax.swing.*;
 
 public class GameWindow extends JFrame {
 
-    // Objek Musik Background
     Sound music = new Sound();
 
     public GameWindow() {
@@ -13,8 +13,8 @@ public class GameWindow extends JFrame {
         this.setResizable(false);
         this.setSize(800, 600);
 
-        // Putar lagu index 0 (Looping)
-        playMusic(0);
+        // Cek Settingan Awal
+        if (GameSettings.isMusicOn) playMusic(0);
 
         showMenu();
 
@@ -28,6 +28,10 @@ public class GameWindow extends JFrame {
         music.loop();
     }
 
+    public void stopMusic() {
+        music.stop();
+    }
+
     public void showMenu() {
         this.getContentPane().removeAll();
         MenuPanel menu = new MenuPanel(this);
@@ -36,13 +40,20 @@ public class GameWindow extends JFrame {
         this.repaint();
     }
 
-    // UPDATE: Menerima parameter Level
+    // BARU: Pindah ke layar Settings
+    public void showSettings() {
+        this.getContentPane().removeAll();
+        SettingsPanel settings = new SettingsPanel(this);
+        this.add(settings);
+        this.revalidate();
+        this.repaint();
+    }
+
     public void startGame(String username, int level) {
         this.getContentPane().removeAll();
-        // Oper Level ke GamePanel
         GamePanel game = new GamePanel(this, username, level);
         this.add(game);
-        game.requestFocusInWindow(); // Agar keyboard terbaca
+        game.requestFocusInWindow();
         this.revalidate();
         this.repaint();
     }

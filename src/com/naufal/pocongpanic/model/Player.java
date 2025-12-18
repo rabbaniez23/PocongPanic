@@ -3,11 +3,26 @@ package com.naufal.pocongpanic.model;
 public class Player {
     private int x, y;
 
-    // --- SKILL & MOVEMENT VARIABLES ---
+    // --- MOVEMENT ---
     private int normalSpeed = 5;
     public boolean isDashing = false;
     private int dashTimer = 0;
-    private int dashCooldown = 0;
+    private int dashCooldown = 0; // Cooldown Dash
+
+    // --- SKILLS (BARU) ---
+    // Skill 1: Area Damage (Cooldown 5 detik/300 frame)
+    public int cdSkill1 = 0;
+    public final int MAX_CD_1 = 300;
+
+    // Skill 2: Multishot (Cooldown 8 detik/480 frame)
+    public int cdSkill2 = 0;
+    public int durationSkill2 = 0; // Durasi aktif
+    public final int MAX_CD_2 = 480;
+
+    // Skill 3: Invincible (Cooldown 10 detik/600 frame)
+    public int cdSkill3 = 0;
+    public int durationSkill3 = 0; // Durasi aktif
+    public final int MAX_CD_3 = 600;
 
     // --- ANIMASI ---
     public int direction = 0;
@@ -19,9 +34,7 @@ public class Player {
     // --- GAMEPLAY ---
     private int ammo = 0;
     public boolean upPressed, downPressed, leftPressed, rightPressed;
-
-    // Config
-    public static final int SIZE = 64; // Sesuaikan ukuran hero (64/80)
+    public static final int SIZE = 64;
 
     public Player(int startX, int startY) {
         this.x = startX;
@@ -29,61 +42,47 @@ public class Player {
     }
 
     public void update() {
-        // 1. Tentukan Kecepatan (Normal vs Dash)
-        int currentSpeed = normalSpeed;
+        // 1. Update Timer Skills
+        if (cdSkill1 > 0) cdSkill1--;
 
+        if (cdSkill2 > 0) cdSkill2--;
+        if (durationSkill2 > 0) durationSkill2--; // Kurangi durasi aktif skill 2
+
+        if (cdSkill3 > 0) cdSkill3--;
+        if (durationSkill3 > 0) durationSkill3--; // Kurangi durasi aktif skill 3
+
+        // 2. Dash Logic
+        int currentSpeed = normalSpeed;
         if (isDashing) {
-            currentSpeed = 15; // Ngebut!
+            currentSpeed = 15;
             dashTimer++;
-            if (dashTimer > 10) { // Dash cuma 10 frame (sebentar)
+            if (dashTimer > 10) {
                 isDashing = false;
                 dashTimer = 0;
-                dashCooldown = 60; // Cooldown 1 detik (60 frame)
+                dashCooldown = 60;
             }
         }
-
-        // Kurangi Cooldown
         if (dashCooldown > 0) dashCooldown--;
 
-        // 2. Logika Gerak
+        // 3. Gerak
         isMoving = false;
-        if (upPressed) {
-            y -= currentSpeed;
-            direction = 2; // Atas
-            isMoving = true;
-            facingLeft = false;
-        }
-        else if (downPressed) {
-            y += currentSpeed;
-            direction = 0; // Bawah
-            isMoving = true;
-            facingLeft = false;
-        }
-        else if (leftPressed) {
-            x -= currentSpeed;
-            direction = 1; // Kiri
-            facingLeft = true;
-            isMoving = true;
-        }
-        else if (rightPressed) {
-            x += currentSpeed;
-            direction = 1; // Kanan
-            facingLeft = false;
-            isMoving = true;
-        }
+        if (upPressed) { y -= currentSpeed; direction = 2; isMoving = true; facingLeft = false; }
+        else if (downPressed) { y += currentSpeed; direction = 0; isMoving = true; facingLeft = false; }
+        else if (leftPressed) { x -= currentSpeed; direction = 1; facingLeft = true; isMoving = true; }
+        else if (rightPressed) { x += currentSpeed; direction = 1; facingLeft = false; isMoving = true; }
 
-        // 3. Pembatas Layar (Biar gak kabur)
+        // Batas Layar
         if (x < 0) x = 0;
         if (y < 0) y = 0;
         if (x > 800 - SIZE) x = 800 - SIZE;
         if (y > 600 - SIZE - 40) y = 600 - SIZE - 40;
 
-        // 4. Animasi Sprite
+        // Animasi
         if (isMoving) {
             spriteCounter++;
-            if (spriteCounter > 10) { // Ganti frame tiap 10 tick
+            if (spriteCounter > 10) {
                 spriteNum++;
-                if (spriteNum >= 6) spriteNum = 0; // Asumsi ada 6 frame jalan
+                if (spriteNum >= 6) spriteNum = 0;
                 spriteCounter = 0;
             }
         } else {
@@ -91,12 +90,9 @@ public class Player {
         }
     }
 
-    // --- SKILL ACTIVATION ---
-    public void activateSkill() {
-        if (dashCooldown == 0 && !isDashing) {
-            isDashing = true;
-            // System.out.println("SKILL: DASH!");
-        }
+    // --- ACTION METHODS ---
+    public void activateDash() {
+        if (dashCooldown == 0 && !isDashing) isDashing = true;
     }
 
     // --- GETTERS & SETTERS ---
@@ -105,4 +101,8 @@ public class Player {
     public int getAmmo() { return ammo; }
     public int getX() { return x; }
     public int getY() { return y; }
+
+    public int getDashCooldown() { return dashCooldown; }
+    public boolean isMultishotActive() { return durationSkill2 > 0; }
+    public boolean isInvincible() { return durationSkill3 > 0; }
 }

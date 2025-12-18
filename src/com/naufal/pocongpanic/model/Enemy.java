@@ -6,7 +6,7 @@ public class Enemy {
     private int x, y;
     private int speed = 2;
 
-    // Timer agar musuh tidak menembak terus menerus (seperti senapan mesin)
+    // Timer agar musuh tidak menembak terus menerus
     public int shootTimer = 0;
 
     // Animasi
@@ -16,17 +16,20 @@ public class Enemy {
     public Enemy(int startX, int startY) {
         this.x = startX;
         this.y = startY;
+
+        // BARU: Random start agar musuh tidak menembak barengan saat baru spawn
+        this.shootTimer = (int)(Math.random() * 100);
     }
 
     // Logika Musuh
     public void update(int playerX, int playerY) {
-        // 1. Gerak pelan mendekati player (Biar seru)
+        // 1. Gerak pelan mendekati player
         if (x < playerX) x += 1;
         if (x > playerX) x -= 1;
         if (y < playerY) y += 1;
         if (y > playerY) y -= 1;
 
-        // 2. Hitung waktu nembak (Setiap ~2 detik atau 120 frame)
+        // 2. Hitung waktu nembak
         shootTimer++;
 
         // 3. Animasi
@@ -40,7 +43,8 @@ public class Enemy {
 
     // Cek apakah musuh siap nembak?
     public boolean readyToShoot() {
-        if (shootTimer >= 120) { // Ganti angka ini untuk atur kecepatan tembak musuh
+        // BARU: Diperlambat jadi 180 (3 detik) agar Level 1 tidak terlalu chaos
+        if (shootTimer >= 180) {
             shootTimer = 0;
             return true;
         }
