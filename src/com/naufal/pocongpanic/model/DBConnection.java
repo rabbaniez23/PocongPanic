@@ -25,18 +25,45 @@ public class DBConnection {
     }
 
     // Fungsi Simpan Data (Dipanggil saat Game Over)
-    public static void saveScore(String username, int skor, int peluruMeleset, int sisaPeluru) {
+    public static void saveScore(String username, int skorBaru, int peluruMeleset, int sisaPeluru) {
         try {
             Connection con = getConnection();
-            String sql = "INSERT INTO tbenefit (username, skor, peluru_meleset, sisa_peluru) VALUES (?, ?, ?, ?)";
-            PreparedStatement ps = con.prepareStatement(sql);
-            ps.setString(1, username);
-            ps.setInt(2, skor);
-            ps.setInt(3, peluruMeleset);
-            ps.setInt(4, sisaPeluru);
-            ps.executeUpdate();
+
+            // 1. Cek apakah username sudah ada?
+            String checkSql = "SELECT skor FROM tbenefit WHERE username = ?";
+            PreparedStatement checkPs = con.prepareStatement(checkSql);
+            checkPs.setString(1, username);
+            ResultSet rs = checkPs.executeQuery();
+
+            if (rs.next()) {
+                // --- USER SUDAH ADA, CEK HIGHSCORE ---
+                int skorLama = rs.getInt("skor");
+
+                if (skorBaru > skorLama) {
+                    // Skor Baru lebih tinggi! Update datanya.
+                    String updateSql = "UPDATE tbenefit SET skor = ?, peluru_meleset = ?, sisa_peluru = ? WHERE username = ?";
+                    PreparedStatement updatePs = con.prepareStatement(updateSql);
+                    updatePs.setInt(1, skorBaru);
+                    updatePs.setInt(2, peluruMeleset);
+                    updatePs.setInt(3, sisaPeluru);
+                    updatePs.setString(4, username);
+                    updatePs.executeUpdate();
+                    System.out.println("New Highscore Updated for " + username + "!");
+                } else {
+                    System.out.println("Skor belum melampaui highscore lama.");
+                }
+            } else {
+                // --- USER BARU, INSERT ---
+                String insertSql = "INSERT INTO tbenefit (username, skor, peluru_meleset, sisa_peluru) VALUES (?, ?, ?, ?)";
+                PreparedStatement insertPs = con.prepareStatement(insertSql);
+                insertPs.setString(1, username);
+                insertPs.setInt(2, skorBaru);
+                insertPs.setInt(3, peluruMeleset);
+                insertPs.setInt(4, sisaPeluru);
+                insertPs.executeUpdate();
+                System.out.println("New User Inserted!");
+            }
             con.close();
-            System.out.println("Data Berhasil Disimpan!");
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -7,15 +7,15 @@ import java.net.URL;
 
 public class Sound {
     Clip clip;
-    URL[] soundURL = new URL[5]; // Array untuk menyimpan daftar lagu
+    URL[] soundURL = new URL[5]; // Array untuk menyimpan daftar lagu/suara
 
     public Sound() {
-        // --- DAFTAR LAGU ---
-        // Index 0: Lagu Background (Menu & Game)
+        // Index 0: Musik Background
         soundURL[0] = getClass().getResource("/assets/music.wav");
-
-        // Kamu bisa tambah efek suara lain di sini (misal suara tembak)
-        // soundURL[1] = getClass().getResource("/assets/tembak.wav");
+        // Index 1: Suara Tembak
+        soundURL[1] = getClass().getResource("/assets/shoot.wav");
+        // Index 2: Suara Ledakan/Mati
+        soundURL[2] = getClass().getResource("/assets/explosion.wav");
     }
 
     public void setFile(int i) {
@@ -24,20 +24,32 @@ public class Sound {
             clip = AudioSystem.getClip();
             clip.open(ais);
         } catch (Exception e) {
-            System.out.println("Gagal membuka file suara! Pastikan format .wav benar.");
-            e.printStackTrace();
+            // Hilangkan error print kalau file belum ada, biar gak spam di console
         }
     }
 
     public void play() {
-        if(clip != null) clip.start();
+        if(clip != null) {
+            clip.start();
+        }
     }
 
     public void loop() {
-        if(clip != null) clip.loop(Clip.LOOP_CONTINUOUSLY);
+        if(clip != null) {
+            clip.loop(Clip.LOOP_CONTINUOUSLY);
+        }
     }
 
     public void stop() {
-        if(clip != null) clip.stop();
+        if(clip != null) {
+            clip.stop();
+        }
+    }
+
+    // METHOD BARU: Untuk mainkan efek suara (Sound Effect)
+    // Otomatis load file -> mainkan sekali
+    public void playSE(int i) {
+        setFile(i);
+        play();
     }
 }
