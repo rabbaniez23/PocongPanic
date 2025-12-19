@@ -1,4 +1,4 @@
-package com.naufal.pocongpanic.model;
+package com.naufal.hideandseek.model; // Nama package sesuai file asli
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -8,26 +8,28 @@ import java.sql.Statement;
 import javax.swing.table.DefaultTableModel;
 
 /**
- * Class DBConnection (Model)
+ * Class DBConnection
  * Bertugas menangani segala komunikasi dengan Database MySQL.
- * Menggunakan JDBC untuk menyimpan dan mengambil skor pemain.
+ * Menggunakan JDBC untuk menyimpan (Save) dan mengambil (Load) skor pemain.
  */
 public class DBConnection {
-    // Konfigurasi Database (Sesuaikan jika ada perubahan user/pass)
+    // Konfigurasi Database (Host, User, Password)
+    // Pastikan XAMPP/MySQL sudah berjalan dan database 'db_game_pbo' sudah dibuat
     private static final String URL = "jdbc:mysql://localhost:3306/db_game_pbo";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
     /**
-     * Membuat koneksi ke database.
-     * @return Objek Connection jika berhasil, null jika gagal.
+     * getConnection()
+     * Membuka jalur koneksi ke database.
+     * @return Objek Connection jika berhasil, null jika gagal/error.
      */
     public static Connection getConnection() {
         Connection con = null;
         try {
-            // Memuat driver MySQL
+            // Memuat driver MySQL JDBC (Library eksternal)
             Class.forName("com.mysql.cj.jdbc.Driver");
-            // Membuka koneksi
+            // Mencoba login ke database
             con = DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (Exception e) {
             System.out.println("Koneksi Database Gagal: " + e.getMessage());
@@ -36,48 +38,47 @@ public class DBConnection {
     }
 
     /**
-     * Mengambil data pemain spesifik untuk fitur "Lanjut Main" (Akumulasi).
+     * loadPlayerData()
+     * Mengambil data pemain lama untuk fitur "Lanjut Main".
      * @param username Nama pemain yang dicari.
-     * @return Array int [skor, peluru_meleset, sisa_peluru] atau null jika user baru.
+     * @return Array int berisi [skor, peluru_meleset, sisa_peluru] atau null jika user baru.
      */
     public static int[] loadPlayerData(String username) {
         int[] data = null;
         try {
             Connection con = getConnection();
-            // Query untuk mengambil data berdasarkan username
+            // Query SQL: Ambil data berdasarkan nama user
             String sql = "SELECT skor, peluru_meleset, sisa_peluru FROM tbenefit WHERE username = ?";
             PreparedStatement ps = con.prepareStatement(sql);
             ps.setString(1, username);
             ResultSet rs = ps.executeQuery();
 
-            // Jika data ditemukan, simpan ke dalam array
+            // Jika ada hasilnya (rs.next() bernilai true), simpan ke array
             if (rs.next()) {
                 data = new int[3];
                 data[0] = rs.getInt("skor");
                 data[1] = rs.getInt("peluru_meleset");
                 data[2] = rs.getInt("sisa_peluru");
             }
-            con.close();
+            con.close(); // Tutup koneksi agar hemat resource
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return data; // Mengembalikan null jika pemain belum terdaftar
+        return data;
     }
 
     /**
-     * Menyimpan atau Memperbarui data pemain ke database.
-     * Logikanya: Jika username ada -> Update. Jika tidak ada -> Insert.
-     *
-     * @param username Nama pemain.
-     * @param currentScore Skor total saat ini.
-     * @param currentMissed Jumlah peluru meleset total.
-     * @param currentAmmo Sisa peluru yang dimiliki.
+     * saveScore()
+     * Menyimpan data pemain.
+     * Logika Cerdas: Cek dulu apakah usernya sudah ada?
+     * - Jika ADA: Update datanya (tambah skor).
+     * - Jika TIDAK: Insert data baru (pemain baru).
      */
     public static void saveScore(String username, int currentScore, int currentMissed, int currentAmmo) {
         try {
             Connection con = getConnection();
 
-            // 1. Cek apakah username sudah ada di tabel?
+            // 1. Cek keberadaan user
             String checkSql = "SELECT * FROM tbenefit WHERE username = ?";
             PreparedStatement checkPs = con.prepareStatement(checkSql);
             checkPs.setString(1, username);
@@ -112,26 +113,29 @@ public class DBConnection {
     }
 
     /**
-     * Mengambil seluruh data Highscore untuk ditampilkan di Tabel Menu.
-     * @return DefaultTableModel yang siap dimasukkan ke JTable.
+     * getTableData()
+     * Mengambil SELURUH data Highscore untuk ditampilkan di Tabel Menu Utama.
+     * @return DefaultTableModel yang formatnya sudah siap dipakai oleh JTable Java Swing.
      */
     public static DefaultTableModel getTableData() {
-        // Nama-nama kolom tabel
+        // Mendefinisikan judul kolom tabel
         String[] columnNames = {"Username", "Skor", "Peluru Meleset", "Sisa Peluru"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         try {
             Connection con = getConnection();
             Statement st = con.createStatement();
-            // Mengambil semua data diurutkan dari SKOR TERTINGGI (DESC)
+            // Query: Ambil semua data, urutkan dari skor tertinggi (DESC)
             ResultSet rs = st.executeQuery("SELECT * FROM tbenefit ORDER BY skor DESC");
 
+            // Loop semua baris data dari database
             while (rs.next()) {
                 String user = rs.getString("username");
                 int score = rs.getInt("skor");
                 int missed = rs.getInt("peluru_meleset");
                 int remain = rs.getInt("sisa_peluru");
-                // Masukkan baris data ke model tabel
+
+                // Tambahkan baris baru ke model tabel
                 model.addRow(new Object[]{user, score, missed, remain});
             }
             con.close();

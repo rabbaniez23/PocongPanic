@@ -2,17 +2,23 @@ package com.naufal.hideandseek.model;
 
 import java.awt.Rectangle;
 
+/**
+ * Class Bullet
+ * Mengatur pergerakan dan properti peluru.
+ */
 public class Bullet {
     private int x, y;
-    // Arah tembakan: 0=Bawah, 1=Kanan, 2=Atas, 3=Kiri
-    // 4 = Custom Velocity (Gerak bebas)
+
+    // Direction: Menentukan arah gerak peluru.
+    // 0=Bawah, 1=Kanan, 2=Atas, 3=Kiri
+    // 4=Custom (Bergerak bebas/diagonal menggunakan velocityX dan velocityY)
     private int direction;
-    private int speed = 8;
+    private int speed = 8; // Kecepatan dasar peluru
 
-    public boolean isEnemyBullet;
-    private double velocityX, velocityY;
+    public boolean isEnemyBullet; // Penanda: Apakah ini peluru musuh? (true) atau pemain? (false)
+    private double velocityX, velocityY; // Digunakan jika direction = 4
 
-    // Constructor Normal (Lurus)
+    // Constructor 1: Peluru Gerak Lurus (Atas/Bawah/Kiri/Kanan)
     public Bullet(int startX, int startY, int direction, boolean isEnemyBullet) {
         this.x = startX;
         this.y = startY;
@@ -20,31 +26,36 @@ public class Bullet {
         this.isEnemyBullet = isEnemyBullet;
     }
 
-    // Constructor Custom Velocity (Untuk Skill Spread Shot / Musuh)
+    // Constructor 2: Peluru Custom Velocity (Bisa miring/diagonal)
+    // Biasanya untuk Skill Shotgun atau musuh yang menembak miring
     public Bullet(int startX, int startY, double vX, double vY, boolean isEnemyBullet) {
         this.x = startX;
         this.y = startY;
         this.velocityX = vX;
         this.velocityY = vY;
-        this.direction = 4; // Mode Custom
+        this.direction = 4; // Set ke mode Custom
         this.isEnemyBullet = isEnemyBullet;
     }
 
-    // Constructor Musuh Mengejar (Aimbot)
+    // Constructor 3: Peluru Musuh Aimbot (Mengejar target X,Y)
     public Bullet(int startX, int startY, int targetX, int targetY) {
-        this(startX, startY, 0, 0, true);
+        this(startX, startY, 0, 0, true); // Panggil constructor default, set isEnemyBullet = true
+
+        // Hitung sudut tembakan menggunakan arctan2 agar peluru mengarah ke pemain
         double angle = Math.atan2(targetY - startY, targetX - startX);
         this.velocityX = Math.cos(angle) * speed;
         this.velocityY = Math.sin(angle) * speed;
+        this.direction = 4; // Pastikan mode geraknya custom
     }
 
+    // update(): Dipanggil setiap frame untuk mengupdate posisi peluru
     public void update() {
         if (direction == 4) {
-            // Gerak Custom (Miring)
+            // Logika gerak bebas (diagonal/sudut tertentu)
             x += velocityX;
             y += velocityY;
         } else {
-            // Gerak Lurus (Standard)
+            // Logika gerak kaku 4 arah (WASD)
             switch (direction) {
                 case 2: y -= speed; break; // Atas
                 case 0: y += speed; break; // Bawah
@@ -57,6 +68,7 @@ public class Bullet {
     public int getX() { return x; }
     public int getY() { return y; }
 
+    // Hitbox peluru (10x10 pixel)
     public Rectangle getBounds() {
         return new Rectangle(x, y, 10, 10);
     }
