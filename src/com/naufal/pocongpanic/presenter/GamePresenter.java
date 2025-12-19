@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class GamePresenter {
+    // Models
     private Player player;
     private ArrayList<Enemy> enemies = new ArrayList<>();
     private ArrayList<Obstacle> obstacles = new ArrayList<>();
@@ -15,6 +16,7 @@ public class GamePresenter {
     private ArrayList<Particle> particles = new ArrayList<>();
     private ArrayList<VisualEffect> visualEffects = new ArrayList<>();
 
+    // Game Data
     private String username;
     private int difficultyLevel;
 
@@ -37,17 +39,37 @@ public class GamePresenter {
     }
 
     public void setupGame() {
+        // Init Player (Default ammo 0 di class Player)
         player = new Player(360, 260);
+
         enemies.clear();
         bullets.clear();
         obstacles.clear();
         particles.clear();
         visualEffects.clear();
-
         isGameOver = false;
-        scoreKill = 0;
-        bulletsMissed = 0;
 
+        // --- REVISI: LOAD DATA LAMA (AKUMULASI) ---
+        // Cek apakah user ini punya data tersimpan (Skor/Peluru)?
+        int[] savedData = DBConnection.loadPlayerData(username);
+
+        if (savedData != null) {
+            // Jika User LAMA: Lanjutkan progress
+            this.scoreKill = savedData[0];      // Lanjut skor lama
+            this.bulletsMissed = savedData[1];  // Lanjut hitungan meleset
+            player.addAmmo(savedData[2]);       // Pakai sisa peluru game sebelumnya
+
+            System.out.println("Loaded User: " + username + " | Ammo: " + savedData[2] + " | Score: " + savedData[0]);
+        } else {
+            // Jika User BARU: Mulai dari 0
+            this.scoreKill = 0;
+            this.bulletsMissed = 0;
+            // Ammo default Player sudah 0
+            System.out.println("New User: " + username + " starting fresh.");
+        }
+        // -------------------------------------------
+
+        // Spawn Obstacle Logic (Sama seperti sebelumnya)
         Random rand = new Random();
         int targetCount = 5 + rand.nextInt(3);
         int attempts = 0;
@@ -67,7 +89,6 @@ public class GamePresenter {
                     break;
                 }
             }
-
             if (!tooClose) {
                 obstacles.add(new Obstacle(ox, oy, 80, 90));
             }
@@ -79,8 +100,9 @@ public class GamePresenter {
 
         player.update(obstacles);
 
+        // Spawn Rate
         int baseSpawn = 200 - (difficultyLevel * 10);
-        int spawnRate = Math.max(50, baseSpawn - (scoreKill * 2));
+        int spawnRate = Math.max(50, baseSpawn - (scoreKill * 2)); // Semakin besar skor, spawn makin cepat
         spawnTimer++;
         if (spawnTimer > spawnRate) {
             int randomX = (int)(Math.random() * 750);
@@ -90,10 +112,9 @@ public class GamePresenter {
 
         Rectangle playerHitbox = new Rectangle(player.getX()+20, player.getY()+20, PLAYER_SIZE-40, PLAYER_SIZE-40);
 
+        // Update Enemies
         for (int i = 0; i < enemies.size(); i++) {
             Enemy en = enemies.get(i);
-
-            // PERUBAHAN DI SINI: Kirim obstacles ke enemy
             en.update(player.getX(), player.getY(), obstacles);
 
             if (en.readyToShoot()) shootEnemyBullet(en);
@@ -105,6 +126,7 @@ public class GamePresenter {
             }
         }
 
+        // Update Bullets
         for (int i = 0; i < bullets.size(); i++) {
             Bullet b = bullets.get(i);
             b.update();
@@ -112,13 +134,19 @@ public class GamePresenter {
 
             if (b.getX() < -50 || b.getX() > WIDTH+50 || b.getY() < -50 || b.getY() > HEIGHT+50) {
                 removeBullet = true;
-                if (b.isEnemyBullet) { player.addAmmo(1); bulletsMissed++; }
+                if (b.isEnemyBullet) {
+                    player.addAmmo(1); // Dapat peluru kalau musuh meleset
+                    bulletsMissed++;   // Hitung peluru meleset (akumulasi)
+                }
             }
 
             for (Obstacle obs : obstacles) {
                 if (b.getBounds().intersects(obs.getBounds())) {
                     removeBullet = true;
-                    if (b.isEnemyBullet) { player.addAmmo(1); bulletsMissed++; }
+                    if (b.isEnemyBullet) {
+                        player.addAmmo(1);
+                        bulletsMissed++;
+                    }
                     break;
                 }
             }
@@ -140,7 +168,7 @@ public class GamePresenter {
                             spawnExplosionParticles(enemies.get(j).getX(), enemies.get(j).getY(), Color.ORANGE);
 
                             enemies.remove(j);
-                            scoreKill++;
+                            scoreKill++; // Skor bertambah
                             removeBullet = true;
                             break;
                         }
@@ -164,7 +192,7 @@ public class GamePresenter {
             int px = player.getX() + PLAYER_SIZE/2;
             int py = player.getY() + PLAYER_SIZE/2;
             soundEffect.playSE(1);
-            player.useAmmo();
+            player.useAmmo(); // Peluru berkurang
 
             if (player.isMultishotActive()) {
                 double angleBase = 0;
@@ -253,6 +281,7 @@ public class GamePresenter {
 
     private void triggerGameOver() {
         isGameOver = true;
+        // SIMPAN SKOR TERAKHIR (Yang sudah diakumulasi sejak awal)
         DBConnection.saveScore(username, scoreKill, bulletsMissed, player.getAmmo());
     }
 

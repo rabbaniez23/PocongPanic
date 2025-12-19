@@ -8,7 +8,7 @@ import java.sql.Statement;
 import javax.swing.table.DefaultTableModel;
 
 public class DBConnection {
-    // Sesuaikan dengan settingan XAMPP kamu (default biasanya root, tanpa password)
+    // Sesuaikan dengan settingan XAMPP kamu
     private static final String URL = "jdbc:mysql://localhost:3306/db_game_pbo";
     private static final String USER = "root";
     private static final String PASSWORD = "";
@@ -24,44 +24,66 @@ public class DBConnection {
         return con;
     }
 
-    // Fungsi Simpan Data (Dipanggil saat Game Over)
-    public static void saveScore(String username, int skorBaru, int peluruMeleset, int sisaPeluru) {
+    // --- BARU: AMBIL DATA PEMAIN (Skor, Missed, Ammo) ---
+    // Return array: [skor, peluru_meleset, sisa_peluru]
+    // Kalau user baru, return null
+    public static int[] loadPlayerData(String username) {
+        int[] data = null;
+        try {
+            Connection con = getConnection();
+            String sql = "SELECT skor, peluru_meleset, sisa_peluru FROM tbenefit WHERE username = ?";
+            PreparedStatement ps = con.prepareStatement(sql);
+            ps.setString(1, username);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                data = new int[3];
+                data[0] = rs.getInt("skor");
+                data[1] = rs.getInt("peluru_meleset");
+                data[2] = rs.getInt("sisa_peluru");
+            }
+            con.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return data; // Return null jika user tidak ditemukan (New User)
+    }
+
+    // --- REVISI: SIMPAN DATA (SELALU UPDATE) ---
+    // Sesuai spek: Data terus bertambah/disimpan, bukan cuma highscore.
+    public static void saveScore(String username, int currentScore, int currentMissed, int currentAmmo) {
         try {
             Connection con = getConnection();
 
-            // 1. Cek apakah username sudah ada?
-            String checkSql = "SELECT skor FROM tbenefit WHERE username = ?";
+            // Cek apakah username sudah ada?
+            String checkSql = "SELECT * FROM tbenefit WHERE username = ?";
             PreparedStatement checkPs = con.prepareStatement(checkSql);
             checkPs.setString(1, username);
             ResultSet rs = checkPs.executeQuery();
 
             if (rs.next()) {
-                // --- USER SUDAH ADA, CEK HIGHSCORE ---
-                int skorLama = rs.getInt("skor");
+                // USER LAMA -> UPDATE (Timpa data lama dengan data terakhir saat game over)
+                // Karena di GamePresenter kita sudah menjumlahkan (Start Value + Gained Value),
+                // maka di sini kita tinggal UPDATE saja nilai akhirnya.
+                String updateSql = "UPDATE tbenefit SET skor = ?, peluru_meleset = ?, sisa_peluru = ? WHERE username = ?";
+                PreparedStatement updatePs = con.prepareStatement(updateSql);
+                updatePs.setInt(1, currentScore);
+                updatePs.setInt(2, currentMissed);
+                updatePs.setInt(3, currentAmmo); // Sisa peluru disimpan untuk game berikutnya
+                updatePs.setString(4, username);
+                updatePs.executeUpdate();
+                System.out.println("Progress Saved for " + username);
 
-                if (skorBaru > skorLama) {
-                    // Skor Baru lebih tinggi! Update datanya.
-                    String updateSql = "UPDATE tbenefit SET skor = ?, peluru_meleset = ?, sisa_peluru = ? WHERE username = ?";
-                    PreparedStatement updatePs = con.prepareStatement(updateSql);
-                    updatePs.setInt(1, skorBaru);
-                    updatePs.setInt(2, peluruMeleset);
-                    updatePs.setInt(3, sisaPeluru);
-                    updatePs.setString(4, username);
-                    updatePs.executeUpdate();
-                    System.out.println("New Highscore Updated for " + username + "!");
-                } else {
-                    System.out.println("Skor belum melampaui highscore lama.");
-                }
             } else {
-                // --- USER BARU, INSERT ---
+                // USER BARU -> INSERT
                 String insertSql = "INSERT INTO tbenefit (username, skor, peluru_meleset, sisa_peluru) VALUES (?, ?, ?, ?)";
                 PreparedStatement insertPs = con.prepareStatement(insertSql);
                 insertPs.setString(1, username);
-                insertPs.setInt(2, skorBaru);
-                insertPs.setInt(3, peluruMeleset);
-                insertPs.setInt(4, sisaPeluru);
+                insertPs.setInt(2, currentScore);
+                insertPs.setInt(3, currentMissed);
+                insertPs.setInt(4, currentAmmo);
                 insertPs.executeUpdate();
-                System.out.println("New User Inserted!");
+                System.out.println("New User Created & Saved!");
             }
             con.close();
         } catch (Exception e) {
@@ -69,16 +91,15 @@ public class DBConnection {
         }
     }
 
-    // Fungsi Ambil Data untuk Tabel di Menu Awal
     public static DefaultTableModel getTableData() {
-        // Nama Kolom sesuai soal
         String[] columnNames = {"Username", "Skor", "Peluru Meleset", "Sisa Peluru"};
         DefaultTableModel model = new DefaultTableModel(columnNames, 0);
 
         try {
             Connection con = getConnection();
             Statement st = con.createStatement();
-            ResultSet rs = st.executeQuery("SELECT * FROM tbenefit ORDER BY skor DESC"); // Urutkan skor tertinggi
+            // Urutkan berdasarkan Skor Tertinggi
+            ResultSet rs = st.executeQuery("SELECT * FROM tbenefit ORDER BY skor DESC");
 
             while (rs.next()) {
                 String user = rs.getString("username");
